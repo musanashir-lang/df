@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "SantriRecord": {
+      "title": "SantriRecord",
+      "description": "Data induk santri Pondok Pesantren Darul Fithrah",
+      "type": "object",
+      "properties": {
+        "nis": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "nama": { "type": "string", "maxLength": 160 },
+        "unit": { "type": "string", "enum": ["Wustho", "Ulya", "MDA"] },
+        "kelas": { "type": "string", "maxLength": 64 },
+        "authorUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["nis", "nama", "unit", "kelas", "authorUid"]
+    },
+    "SoalCBTRecord": {
+      "title": "SoalCBTRecord",
+      "description": "Butir soal ujian CBT Darul Fithrah tersimpan per dokumen agar tidak saling timpa dan tidak terkena batas snapshot",
+      "type": "object",
+      "properties": {
+        "idSoal": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "unit": { "type": "string", "enum": ["Wustho", "Ulya", "MDA"] },
+        "kelas": { "type": "string", "maxLength": 64 },
+        "mapel": { "type": "string", "maxLength": 160 },
+        "pertanyaan": { "type": "string", "maxLength": 2000 },
+        "teksArabSoal": { "type": "string", "maxLength": 2000 },
+        "potonganKodeIT": { "type": "string", "maxLength": 4000 },
+        "gambarSoalUrl": {
+          "type": "string",
+          "maxLength": 250000,
+          "pattern": "^(https://|data:image/(png|jpeg|jpg|webp|gif);base64,).*"
+        },
+        "opsiA": { "type": "string", "maxLength": 600 },
+        "opsiB": { "type": "string", "maxLength": 600 },
+        "opsiC": { "type": "string", "maxLength": 600 },
+        "opsiD": { "type": "string", "maxLength": 600 },
+        "kunciJawaban": { "type": "string", "enum": ["A", "B", "C", "D"] },
+        "bobotSoal": { "type": "number" },
+        "pembuatUstadz": { "type": "string", "maxLength": 160 },
+        "updatedAtIso": { "type": "string", "maxLength": 64 },
+        "authorUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": [
+        "idSoal",
+        "unit",
+        "kelas",
+        "mapel",
+        "pertanyaan",
+        "opsiA",
+        "opsiB",
+        "opsiC",
+        "opsiD",
+        "kunciJawaban",
+        "bobotSoal",
+        "authorUid"
+      ]
+    },
+    "SnapshotPesantren": {
+      "title": "SnapshotPesantren",
+      "description": "Dokumen sinkronisasi cloud state Pesantren Darul Fithrah milik admin/ustadz",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "payloadJson": { "type": "string", "maxLength": 900000 },
+        "updatedAtIso": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["ownerId", "payloadJson", "updatedAtIso"]
+    }
+  },
+  "firestore": {
+    "/santri/{santriId}": {
+      "schema": { "$ref": "#/entities/SantriRecord" },
+      "description": "Koleksi data santri per dokumen"
+    },
+    "/soal_cbt/{soalId}": {
+      "schema": { "$ref": "#/entities/SoalCBTRecord" },
+      "description": "Koleksi bank soal CBT per dokumen (mendukung teks Arab, blok kode IT, gambar, dan nama pembuat)"
+    },
+    "/pesantren_snapshots/{snapshotId}": {
+      "schema": { "$ref": "#/entities/SnapshotPesantren" },
+      "description": "Dokumen sinkronisasi terpadu per pemilik/admin"
+    }
+  }
+}

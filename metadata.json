@@ -1,0 +1,6 @@
+{
+  "name": "CBT Web-Lockdown & e-Rapor Digital Pesantren",
+  "description": "Sistem All-in-One Ujian CBT Anti-Curang (Web-Lockdown) dan e-Rapor Digital Pesantren berbasis Google Sheets & Google Apps Script.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

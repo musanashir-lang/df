@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function isBootstrapAdmin() {
+      return isSignedIn() && request.auth.token.email == 'musanashir@gmail.com';
+    }
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'musanashir@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation Blueprints
+    function isValidSantri(data) {
+      return data.keys().hasAll(['nis', 'nama', 'unit', 'kelas', 'authorUid']) &&
+        data.keys().hasOnly(['nis', 'nama', 'unit', 'kelas', 'authorUid']) &&
+        data.nis is string && data.nis.size() >= 1 && data.nis.size() <= 64 && data.nis.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.nama is string && data.nama.size() >= 1 && data.nama.size() <= 160 &&
+        data.unit is string && (data.unit == 'Wustho' || data.unit == 'Ulya' || data.unit == 'MDA') &&
+        data.kelas is string && data.kelas.size() >= 1 && data.kelas.size() <= 64 &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+        data.authorUid == request.auth.uid;
+    }
+
+    function isValidSoalCBT(data) {
+      return data.keys().hasAll(['idSoal', 'unit', 'kelas', 'mapel', 'pertanyaan', 'opsiA', 'opsiB', 'opsiC', 'opsiD', 'kunciJawaban', 'bobotSoal', 'authorUid']) &&
+        data.keys().hasOnly(['idSoal', 'unit', 'kelas', 'mapel', 'pertanyaan', 'teksArabSoal', 'potonganKodeIT', 'gambarSoalUrl', 'opsiA', 'opsiB', 'opsiC', 'opsiD', 'kunciJawaban', 'bobotSoal', 'pembuatUstadz', 'updatedAtIso', 'authorUid']) &&
+        data.idSoal is string && data.idSoal.size() >= 1 && data.idSoal.size() <= 64 && data.idSoal.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.unit is string && (data.unit == 'Wustho' || data.unit == 'Ulya' || data.unit == 'MDA') &&
+        data.kelas is string && data.kelas.size() >= 1 && data.kelas.size() <= 64 &&
+        data.mapel is string && data.mapel.size() >= 1 && data.mapel.size() <= 160 &&
+        data.pertanyaan is string && data.pertanyaan.size() >= 1 && data.pertanyaan.size() <= 2000 &&
+        (!('teksArabSoal' in data) || (data.teksArabSoal is string && data.teksArabSoal.size() <= 2000)) &&
+        (!('potonganKodeIT' in data) || (data.potonganKodeIT is string && data.potonganKodeIT.size() <= 4000)) &&
+        (!('gambarSoalUrl' in data) || (
+          data.gambarSoalUrl is string &&
+          data.gambarSoalUrl.size() >= 1 &&
+          data.gambarSoalUrl.size() <= 250000 &&
+          data.gambarSoalUrl.matches('^(https://|data:image/(png|jpeg|jpg|webp|gif);base64,).*')
+        )) &&
+        data.opsiA is string && data.opsiA.size() >= 1 && data.opsiA.size() <= 600 &&
+        data.opsiB is string && data.opsiB.size() >= 1 && data.opsiB.size() <= 600 &&
+        data.opsiC is string && data.opsiC.size() >= 1 && data.opsiC.size() <= 600 &&
+        data.opsiD is string && data.opsiD.size() >= 1 && data.opsiD.size() <= 600 &&
+        data.kunciJawaban is string && (data.kunciJawaban == 'A' || data.kunciJawaban == 'B' || data.kunciJawaban == 'C' || data.kunciJawaban == 'D') &&
+        data.bobotSoal is number && data.bobotSoal >= 1 && data.bobotSoal <= 100 &&
+        (!('pembuatUstadz' in data) || (data.pembuatUstadz is string && data.pembuatUstadz.size() <= 160)) &&
+        (!('updatedAtIso' in data) || (data.updatedAtIso is string && data.updatedAtIso.size() <= 64)) &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+        data.authorUid == request.auth.uid;
+    }
+
+    function isValidSnapshotPesantren(data) {
+      return data.keys().hasAll(['ownerId', 'payloadJson', 'updatedAtIso']) &&
+        data.keys().hasOnly(['ownerId', 'payloadJson', 'updatedAtIso']) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.payloadJson is string && data.payloadJson.size() >= 2 && data.payloadJson.size() <= 900000 &&
+        data.updatedAtIso is string && data.updatedAtIso.size() >= 10 && data.updatedAtIso.size() <= 64;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+
+    match /santri/{santriId} {
+      allow get: if isSignedIn() && isValidId(santriId) && (existing().authorUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && resource.data.authorUid == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(santriId) && isValidSantri(incoming()) && incoming().nis == santriId;
+      allow update: if isSignedIn() && isValidId(santriId) && isValidSantri(incoming()) && incoming().nis == existing().nis && (
+        isAdmin() || (
+          existing().authorUid == request.auth.uid &&
+          incoming().authorUid == existing().authorUid &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'unit', 'kelas'])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(santriId) && (existing().authorUid == request.auth.uid || isAdmin());
+    }
+
+    match /soal_cbt/{soalId} {
+      allow get: if isSignedIn() && isValidId(soalId) && (existing().authorUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.authorUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isSignedIn() && isValidId(soalId) && isValidSoalCBT(incoming()) && incoming().idSoal == soalId;
+      allow update: if isSignedIn() && isValidId(soalId) && isValidSoalCBT(incoming()) && incoming().idSoal == existing().idSoal && (
+        isAdmin() || (
+          existing().authorUid == request.auth.uid &&
+          incoming().authorUid == existing().authorUid &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'pertanyaan',
+            'teksArabSoal',
+            'potonganKodeIT',
+            'gambarSoalUrl',
+            'opsiA',
+            'opsiB',
+            'opsiC',
+            'opsiD',
+            'kunciJawaban',
+            'bobotSoal',
+            'pembuatUstadz',
+            'updatedAtIso'
+          ])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(soalId) && (existing().authorUid == request.auth.uid || isAdmin());
+    }
+
+    match /pesantren_snapshots/{snapshotId} {
+      allow get: if isSignedIn() && isValidId(snapshotId) && snapshotId == request.auth.uid && (
+        resource == null ||
+        isAdmin() ||
+        existing().get('ownerId', existing().get('ownerUid', '')) == request.auth.uid
+      );
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(snapshotId) && snapshotId == request.auth.uid && isValidSnapshotPesantren(incoming());
+      allow update: if isSignedIn() && isValidId(snapshotId) && snapshotId == request.auth.uid && isValidSnapshotPesantren(incoming()) && (
+        isAdmin() || (
+          existing().get('ownerId', existing().get('ownerUid', '')) == request.auth.uid &&
+          incoming().ownerId == request.auth.uid &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['ownerId', 'ownerUid', 'payloadJson', 'updatedAtIso', 'updatedAt'])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(snapshotId) && snapshotId == request.auth.uid && (
+        isAdmin() ||
+        existing().get('ownerId', existing().get('ownerUid', '')) == request.auth.uid
+      );
+    }
+  }
+}
